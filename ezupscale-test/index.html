@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EZ Upscale 16K Test</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f2937, #020617 60%);
+      color: #e5e7eb;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: min(920px, 100%);
+      background: rgba(15, 23, 42, 0.86);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.35);
+      backdrop-filter: blur(14px);
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(24px, 5vw, 42px); }
+    p { margin: 0 0 18px; color: #94a3b8; line-height: 1.6; }
+    label { display: block; margin: 14px 0 8px; color: #cbd5e1; font-weight: 650; }
+    input, select, button, textarea {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 14px;
+      padding: 13px 14px;
+      background: rgba(2, 6, 23, 0.72);
+      color: #e5e7eb;
+      outline: none;
+      font-size: 15px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 170px; gap: 12px; }
+    button {
+      margin-top: 16px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border: 0;
+      font-weight: 800;
+    }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .box {
+      background: rgba(2, 6, 23, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 18px;
+      padding: 12px;
+      min-height: 180px;
+      overflow: hidden;
+    }
+    .box img {
+      width: 100%;
+      max-height: 380px;
+      object-fit: contain;
+      border-radius: 14px;
+      background: #020617;
+    }
+    .box h3 { margin: 0 0 10px; font-size: 15px; color: #c4b5fd; }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 360px;
+      overflow: auto;
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #d1d5db;
+    }
+    .link { color: #93c5fd; word-break: break-all; display: block; margin-top: 10px; }
+    @media (max-width: 760px) {
+      .grid, .preview { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>EZ Upscale 16K Test</h1>
+    <p>Web simpel buat ngetes endpoint upscale sampai 16K. Masukkan direct image URL, pilih resolusi, lalu cek hasilnya.</p>
+
+    <label>Image URL</label>
+    <input id="imageUrl" value="https://raw.githubusercontent.com/rhteaster-ui/Samph/refs/heads/main/e1d350e1-673b-46f4-9c68-f36ecc188e4c.jpeg" />
+
+    <div class="grid">
+      <div>
+        <label>Model</label>
+        <select id="model">
+          <option value="upscale_fast">upscale_fast</option>
+          <option value="unblur">unblur</option>
+        </select>
+      </div>
+      <div>
+        <label>Resolution</label>
+        <select id="resolution">
+          <option>2K</option>
+          <option>4K</option>
+          <option>8K</option>
+          <option selected>16K</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="btn">Generate / Test Upscale</button>
+
+    <section class="preview">
+      <div class="box">
+        <h3>Input Preview</h3>
+        <img id="inputPreview" alt="input preview" />
+      </div>
+      <div class="box">
+        <h3>Result Preview</h3>
+        <img id="resultPreview" alt="result preview" style="display:none" />
+        <a id="resultLink" class="link" target="_blank" rel="noreferrer"></a>
+      </div>
+    </section>
+
+    <div class="box" style="margin-top:14px">
+      <h3>JSON Response</h3>
+      <pre id="out">Belum ada response.</pre>
+    </div>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const imageUrl = $("imageUrl");
+    const inputPreview = $("inputPreview");
+    const resultPreview = $("resultPreview");
+    const resultLink = $("resultLink");
+    const out = $("out");
+    const btn = $("btn");
+
+    function refreshPreview() {
+      inputPreview.src = imageUrl.value.trim();
+    }
+    imageUrl.addEventListener("input", refreshPreview);
+    refreshPreview();
+
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "Processing...";
+      resultPreview.style.display = "none";
+      resultLink.textContent = "";
+      resultLink.removeAttribute("href");
+      out.textContent = "Loading...";
+
+      try {
+        const res = await fetch("/api/upscale", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            imageUrl: imageUrl.value.trim(),
+            resolution: $("resolution").value,
+            model: $("model").value
+          })
+        });
+
+        const data = await res.json();
+        out.textContent = JSON.stringify(data, null, 2);
+
+        if (data.status && data.imageUrl) {
+          resultPreview.src = data.imageUrl;
+          resultPreview.style.display = "block";
+          resultLink.href = data.imageUrl;
+          resultLink.textContent = data.imageUrl;
+        }
+      } catch (err) {
+        out.textContent = JSON.stringify({ status: false, error: err.message }, null, 2);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate / Test Upscale";
+      }
+    });
+  </script>
+</body>
+</html>

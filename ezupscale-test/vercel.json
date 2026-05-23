@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "functions": {
+    "api/upscale.js": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    { "src": "/api/upscale", "dest": "/api/upscale.js" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
